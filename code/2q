@@ -184,9 +184,23 @@ AddrSpace::loadPage(int addr)
 	if (i >= NumPhysPages) { // no free physical page
 		unsigned int j, k;
 		int phyPage;
+		int min;
+		ListIterator<unsigned int> *iter;
 
-		if(!FIFO->IsEmpty()) j = FIFO->RemoveFront(); // FIFO algorithm
-		else return false; 
+		/*if(!FIFO->IsEmpty()) j = FIFO->RemoveFront(); // FIFO algorithm
+		else return false; */
+                j = FIFO->Front();
+		min = pageTable[j].count;
+		iter = new ListIterator<unsigned int>(FIFO);
+		for (; !iter->IsDone() && !done; iter->Next()) { // first chance
+			k = iter->Item();
+			if (pageTable[k].count < min) {
+				min = pageTable[k].count;
+				j = k;
+			}
+		}
+		delete iter;
+		else FIFO->Remove(j); 
 		phyPage = pageTable[j].physicalPage;
 		if (pageTable[j].dirty) {
 			// write back to disk
@@ -205,18 +219,12 @@ AddrSpace::loadPage(int addr)
 	pageTable[vpn].use = true;
 	pageTable[vpn].dirty = false;
 	pageTable[vpn].readOnly = false;
+	pageTable[vpn].count = 0;
         bzero(&(kernel->machine->mainMemory[pageTable[vpn].physicalPage * PageSize]), PageSize);  
     	executable->ReadAt(&(kernel->machine->mainMemory[pageTable[vpn].physicalPage * PageSize]),
 		 PageSize, noffH.code.inFileAddr + vpn * PageSize); // load page to memory
     	delete executable;	// close file
 	return true;
-}
-
-void AddrSpace::LRU(unsigned int vpn) 
-{
-	FIFO->Remove(vpn);
-	FIFO->Append(vpn);
-	return;
 }
 
 //----------------------------------------------------------------------

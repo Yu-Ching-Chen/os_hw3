@@ -242,6 +242,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 	return BusErrorException;
     }
     entry->use = TRUE;		// set the use, dirty bits
+    kernel->currentThread->space->LRU(vpn);
     if (writing)
 	entry->dirty = TRUE;
     *physAddr = pageFrame * PageSize + offset;
